@@ -1,33 +1,35 @@
 require('dotenv').config();
 
+const shared = {
+  client: 'mysql2',
+  migrations: {
+    directory: './src/database/migrations',
+  },
+  pool: { min: 0, max: 10 },
+};
+
 module.exports = {
   development: {
-    client: 'mysql2',
+    ...shared,
     connection: {
       host: process.env.DB_HOST || '127.0.0.1',
-      port: process.env.DB_PORT || 3307,
+      port: Number(process.env.DB_PORT) || 3306,
       user: process.env.DB_USER || 'root',
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_NAME || 'memoria_viva',
-    },
-    migrations: {
-      directory: './src/database/migrations',
     },
     useNullAsDefault: true,
   },
 
   production: {
-    client: 'mysql2',
+    ...shared,
     connection: {
       host: process.env.DB_HOST,
-      port: process.env.DB_PORT,
+      port: Number(process.env.DB_PORT) || 3306,
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
-      ssl: { rejectUnauthorized: false }
-    },
-    migrations: {
-      directory: './src/database/migrations',
+      ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
     },
   },
 };
