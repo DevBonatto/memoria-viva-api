@@ -5,6 +5,7 @@ const UserController = require('./controllers/UserController');
 const AuthController = require('./controllers/AuthController');
 const ImageController = require('./controllers/ImageController');
 const RankingController = require('./controllers/RankingController');
+const ProgressController = require('./controllers/ProgressController');
 
 const upload = require('./config/multer');
 const authMiddleware = require('./middlewares/auth');
@@ -25,28 +26,45 @@ routes.get('/rankings', RankingController.index);
 
 routes.get('/me', authMiddleware, AuthController.me);
 
-routes.post(
-    '/images',
-    authMiddleware,
-    (req, res, next) => {
-        upload.single('image')(req, res, (err) => {
-            if (err instanceof multer.MulterError) {
-                if (err.code === 'LIMIT_FILE_SIZE') {
-                    return res.status(413).json({ error: 'Imagem muito grande (máx. 5MB).' });
-                }
-                return res.status(400).json({ error: err.message });
+const MAX_UPLOAD_FILES = 10;
+
+function handleUpload(req, res, next) {
+    // Accepts both `images` (new, multiple) and `image` (legacy, single) fields.
+    const anyFields = upload.fields([
+        { name: 'images', maxCount: MAX_UPLOAD_FILES },
+        { name: 'image', maxCount: 1 },
+    ]);
+
+    anyFields(req, res, (err) => {
+        if (err instanceof multer.MulterError) {
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(413).json({ error: 'Uma das imagens excede o limite de 5MB.' });
             }
-            if (err) {
-                return res.status(400).json({ error: err.message });
-            }
-            next();
-        });
-    },
-    ImageController.upload
-);
+            return res.status(400).json({ error: err.message });
+        }
+        if (err) {
+            return res.status(400).json({ error: err.message });
+        }
+
+        const files = [
+            ...(req.files?.images || []),
+            ...(req.files?.image || []),
+        ];
+
+        if (!files.length) {
+            return res.status(400).json({ error: 'Nenhuma imagem foi enviada.' });
+        }
+
+        req.files = files;
+        next();
+    });
+}
+
+routes.post('/images', authMiddleware, handleUpload, ImageController.upload);
 routes.get('/images', authMiddleware, ImageController.index);
 routes.delete('/images/:id', authMiddleware, ImageController.delete);
 
 routes.post('/rankings', authMiddleware, RankingController.store);
+routes.get('/progress', authMiddleware, ProgressController.show);
 
 module.exports = routes;

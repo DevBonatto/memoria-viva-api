@@ -20,7 +20,13 @@ function extractPublicIdFromUrl(url) {
 module.exports = {
     async upload(req, res) {
         try {
-            if (!req.file) {
+            const files = Array.isArray(req.files) && req.files.length
+                ? req.files
+                : req.file
+                    ? [req.file]
+                    : [];
+
+            if (!files.length) {
                 return res.status(400).json({ error: 'Nenhuma imagem foi enviada.' });
             }
 
@@ -33,22 +39,32 @@ module.exports = {
             }
 
             const user_id = req.userId;
-            const url = req.file.path || req.file.secure_url;
-            const public_id = req.file.filename || req.file.public_id || null;
+            const uploaded = [];
 
-            const [id] = await db('images').insert({
-                user_id,
-                url,
-                public_id,
-                game_type,
-            });
+            for (const file of files) {
+                const url = file.path || file.secure_url;
+                const public_id = file.filename || file.public_id || null;
+
+                const [id] = await db('images').insert({
+                    user_id,
+                    url,
+                    public_id,
+                    game_type,
+                });
+
+                uploaded.push({ id, url, game_type });
+            }
 
             return res.status(201).json({
-                message: 'Imagem salva com sucesso!',
-                image: { id, url, game_type },
+                message:
+                    uploaded.length === 1
+                        ? 'Imagem salva com sucesso!'
+                        : `${uploaded.length} imagens salvas com sucesso!`,
+                images: uploaded,
+                image: uploaded[0],
             });
         } catch (error) {
-            console.error('Erro ao fazer upload da imagem:', error);
+            console.error('Erro ao fazer upload das imagens:', error);
             return res.status(500).json({ error: 'Erro interno no servidor.' });
         }
     },
