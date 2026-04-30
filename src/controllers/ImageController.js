@@ -30,7 +30,12 @@ module.exports = {
                 return res.status(400).json({ error: 'Nenhuma imagem foi enviada.' });
             }
 
-            const { game_type } = req.body;
+            const { game_type, names } = req.body;
+            
+            let namesArray = [];
+            if (names) {
+                namesArray = Array.isArray(names) ? names : [names];
+            }
 
             if (!VALID_GAMES.includes(game_type)) {
                 return res.status(400).json({
@@ -41,7 +46,9 @@ module.exports = {
             const user_id = req.userId;
             const uploaded = [];
 
-            for (const file of files) {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const name = namesArray[i] || null;
                 const url = file.path || file.secure_url;
                 const public_id = file.filename || file.public_id || null;
 
@@ -50,9 +57,10 @@ module.exports = {
                     url,
                     public_id,
                     game_type,
+                    name,
                 });
 
-                uploaded.push({ id, url, game_type });
+                uploaded.push({ id, url, game_type, name });
             }
 
             return res.status(201).json({
@@ -83,7 +91,7 @@ module.exports = {
             const images = await db('images')
                 .where({ user_id, game_type })
                 .orderBy('created_at', 'desc')
-                .select('id', 'url');
+                .select('id', 'url', 'name');
 
             return res.json(images);
         } catch (error) {
