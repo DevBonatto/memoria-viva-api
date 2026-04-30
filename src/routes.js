@@ -62,6 +62,7 @@ function handleUpload(req, res, next) {
 
 routes.post('/images', authMiddleware, handleUpload, ImageController.upload);
 routes.get('/images', authMiddleware, ImageController.index);
+routes.put('/images/:id', authMiddleware, ImageController.update);
 routes.delete('/images/:id', authMiddleware, ImageController.delete);
 
 routes.post('/rankings', authMiddleware, RankingController.store);

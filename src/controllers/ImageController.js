@@ -141,4 +141,29 @@ module.exports = {
             return res.status(500).json({ error: 'Erro ao deletar imagem no servidor.' });
         }
     },
+
+    async update(req, res) {
+        try {
+            const { id } = req.params;
+            const { name } = req.body;
+            const user_id = req.userId;
+
+            if (!name || !name.trim()) {
+                return res.status(400).json({ error: 'O nome não pode ser vazio.' });
+            }
+
+            const image = await db('images').where({ id, user_id }).first();
+
+            if (!image) {
+                return res.status(404).json({ error: 'Imagem não encontrada ou você não tem permissão.' });
+            }
+
+            await db('images').where({ id, user_id }).update({ name: name.trim() });
+
+            return res.json({ message: 'Nome atualizado com sucesso', name: name.trim() });
+        } catch (error) {
+            console.error('Erro ao atualizar imagem:', error);
+            return res.status(500).json({ error: 'Erro ao atualizar a imagem.' });
+        }
+    },
 };
